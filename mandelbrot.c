@@ -83,20 +83,40 @@ int main(int argc, char **argv)
     int s1 = my_rank % p1;
     int s2 = my_rank / p1;
 
-    int m        = atoi(argv[1]);
-    int n        = atoi(argv[2]);
-    int max_iter = atoi(argv[3]);
+    //Store variables in all processes
+    int m;
+    int n;
+    int max_iter;
+    double x1;
+    double x2;
+    double y1;
+    double y2;
 
-    double x1    = atof(argv[4]);
-    double x2    = atof(argv[5]);
-    double y1    = atof(argv[6]);
-    double y2    = atof(argv[7]);
+    //But only root process needs to read parameters
+    if(my_rank == 0) {
+        m        = atoi(argv[1]);
+        n        = atoi(argv[2]);
+        max_iter = atoi(argv[3]);
+        x1       = atof(argv[4]);
+        x2       = atof(argv[5]);
+        y1       = atof(argv[6]);
+        y2       = atof(argv[7]);
+    }
 
     int *picture = malloc(m * n * sizeof(int));
+    // Broadcast the parameters to all processes
+    MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&max_iter, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&x1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&x2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&y1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&y2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     int *gathered_picture = NULL;
 
     if (my_rank == 0) {
-        gathered_picture = malloc(p * m * n * sizeof(int));
+        gathered_picture = malloc(m * n * sizeof(int));
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
