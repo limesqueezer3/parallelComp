@@ -41,9 +41,10 @@ int min(int a, int b)
 void mandelbrot(int m, int n, double x1, double x2, double y1, double y2,
                 int max_iter, int s1, int s2, int p1, int p2, int *picture /* out */)
 {
+    int counter = 0;
     /* Let z = a + bi, c = d + ei */
-    for (int i = s2; i < m; i += p2) {
-        for (int j = s1; j < n; j += p1) {
+    for (int i = s1; i < m; i += p1) {
+        for (int j = s2; j < n; j += p2) {
             /* 8 flops */
             double complex c =  x1 + (x2 - x1) * i / m + 
                                (y1 + (y2 - y1) * j / n) * I;
@@ -59,7 +60,9 @@ void mandelbrot(int m, int n, double x1, double x2, double y1, double y2,
             }
 
             /* Total flops for this pixel are 14 + 7 * t. */
-            picture[j * m + i] = t;
+            // picture[j * m + i] = t;
+            picture[counter] = t;
+            counter++;
         }
     }
 }
@@ -102,8 +105,8 @@ int main(int argc, char **argv)
         y1       = atof(argv[6]);
         y2       = atof(argv[7]);
     }
-
-    int *picture = malloc(m * n * sizeof(int));
+    int max_amount = (m /p1 + 1) * (n/p2 + 1);
+    int *picture = malloc(max_amount * sizeof(int));
     // Broadcast the parameters to all processes
     MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -116,7 +119,7 @@ int main(int argc, char **argv)
     int *gathered_picture = NULL;
 
     if (my_rank == 0) {
-        gathered_picture = malloc(m * n * sizeof(int));
+        gathered_picture = malloc(p* max_amount * sizeof(int));
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -125,18 +128,38 @@ int main(int argc, char **argv)
     mandelbrot(m, n, x1, x2, y1, y2, max_iter, s1, s2, p1, p2, picture);
     MPI_Barrier(MPI_COMM_WORLD);
     double stop = MPI_Wtime();
-    MPI_Gather(picture, m * n, MPI_INT, gathered_picture, m * n, MPI_INT, 0, MPI_COMM_WORLD);
+
+    int *displs = malloc(p*sizeof(int)); 
+    int *rcounts = malloc(p*sizeof(int));
+    for(int i = 0; i <p; i++) {
+        displs[i] = i * max_amount;
+        rcounts[i] = max_amount;
+    }
+    MPI_Gatherv(picture, max_amount, MPI_INT, gathered_picture, rcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
     
     double duration = (stop - start) * 1e9;
     
     if (my_rank == 0) {
         /* Write pgm to stderr. */
+        int *true_picture = malloc(m * n * sizeof(int));
+        for (int i = 0; i < p; i++) {
+            int s1 = i % p1;
+            int s2 = i / p1;
+            for (int j = 0; j < m / p1; j++) {
+                for (int k = 0; k < n / p2; k++) {
+                    if (s2 * m / p1 + j < m && s1 * n / p2 + k < n) {
+                        true_picture[(s2 * m / p1 + j) * n + s1 * n / p2 + k] = gathered_picture[i * max_amount + j * n / p2 + k];
+                    }
+                }
+        }
+    }
+
         fprintf(stderr, "P2\n");
         fprintf(stderr, "%d %d\n", m, n);
         fprintf(stderr, "%d\n", max_iter);
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
-                fprintf(stderr, "%d ", gathered_picture[i * n + j]);
+                fprintf(stderr, "%d ", true_picture[i * n + j]);
             }
             fprintf(stderr, "\n");
         }
