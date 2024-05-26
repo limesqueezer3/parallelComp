@@ -142,17 +142,17 @@ int main(int argc, char **argv)
     if (my_rank == 0) {
         /* Write pgm to stderr. */
         int *true_picture = malloc(m * n * sizeof(int));
-        for (int i = 0; i < p; i++) {
-            int s1 = i % p1;
-            int s2 = i / p1;
-            for (int j = 0; j < m / p1; j++) {
-                for (int k = 0; k < n / p2; k++) {
-                    if (s2 * m / p1 + j < m && s1 * n / p2 + k < n) {
-                        true_picture[(s2 * m / p1 + j) * n + s1 * n / p2 + k] = gathered_picture[i * max_amount + j * n / p2 + k];
-                    }
+        for (int q = 0; q < p; q++) {
+            int counter = max_amount * q;
+            int s1 = q % p1;
+            int s2 = q / p1;
+            for (int i = s1; i < m ; i++) {
+                for (int j = s2; j < n ; j++) {
+                    true_picture[j * m + i] = gathered_picture[counter];
+                    counter++;
                 }
+            }
         }
-    }
 
         fprintf(stderr, "P2\n");
         fprintf(stderr, "%d %d\n", m, n);
