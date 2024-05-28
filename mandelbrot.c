@@ -105,8 +105,7 @@ int main(int argc, char **argv)
         y1       = atof(argv[6]);
         y2       = atof(argv[7]);
     }
-    int max_amount = (m /p1 + 1) * (n/p2 + 1);
-    int *picture = malloc(max_amount * sizeof(int));
+    
     // Broadcast the parameters to all processes
     MPI_Bcast(&m, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -115,7 +114,9 @@ int main(int argc, char **argv)
     MPI_Bcast(&x2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&y1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&y2, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
+    
+    int max_amount = (m /p1 + 1) * (n/p2 + 1);
+    int *picture = malloc(max_amount * sizeof(int));
     int *gathered_picture = NULL;
 
     if (my_rank == 0) {
@@ -137,7 +138,7 @@ int main(int argc, char **argv)
     }
     MPI_Gatherv(picture, max_amount, MPI_INT, gathered_picture, rcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
     
-    double duration = (stop - start) * 1e9;
+    double duration = stop - start;
     
     if (my_rank == 0) {
         /* Write pgm to stderr. */
@@ -146,8 +147,8 @@ int main(int argc, char **argv)
             int counter = max_amount * q;
             int s1 = q % p1;
             int s2 = q / p1;
-            for (int i = s1; i < m ; i++) {
-                for (int j = s2; j < n ; j++) {
+            for (int i = s1; i < m ; i+= p1) {
+                for (int j = s2; j < n ; j+= p2) {
                     true_picture[j * m + i] = gathered_picture[counter];
                     counter++;
                 }
@@ -168,11 +169,12 @@ int main(int argc, char **argv)
         double flops = 8 * m * n;
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
-                flops += 10 * gathered_picture[j * m + i];
+                flops += 10 * true_picture[j * m + i];
             }
         }
 
         printf("%lf\n", flops / 1e9 / duration);
+        printf("%lf duration \n", duration);
     }
     free(picture);
     
