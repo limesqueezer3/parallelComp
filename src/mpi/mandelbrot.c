@@ -187,7 +187,7 @@ int main(int argc, char **argv)
         free(gathered_picture);
 
         /* compute percentage at threshold*/
-        double percentage = (double) *NThresholdGlobal / (m * n) * 100;
+        double percentage = (double) *NThresholdGlobal / (m * n);
         // printf("%d\n", *NThresholdGlobal);
         
         /* Write pgm to stderr. */
