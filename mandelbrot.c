@@ -141,40 +141,51 @@ int main(int argc, char **argv)
     double duration = stop - start;
     
     if (my_rank == 0) {
-        /* Write pgm to stderr. */
-        int *true_picture = malloc(m * n * sizeof(int));
+        
+        /* reconstruct the picture*/
+        // int *true_picture = malloc(m * n * sizeof(int));
+        // for (int q = 0; q < p; q++) {
+        //     int counter = max_amount * q;
+        //     int s1 = q % p1;
+        //     int s2 = q / p1;
+        //     for (int i = s1; i < m ; i+= p1) {
+        //         for (int j = s2; j < n ; j+= p2) {
+        //             true_picture[j * m + i] = gathered_picture[counter];
+        //             counter++;
+        //         }
+        //     }
+        // }
+
+        /* compute flops based on gathered picture instead of true picture. 
+        Also possible on true picture if picture is reconstructed above*/
+        double flops = 8 * m * n;
         for (int q = 0; q < p; q++) {
             int counter = max_amount * q;
             int s1 = q % p1;
             int s2 = q / p1;
             for (int i = s1; i < m ; i+= p1) {
                 for (int j = s2; j < n ; j+= p2) {
-                    true_picture[j * m + i] = gathered_picture[counter];
+                    flops += 10 * gathered_picture[counter];
                     counter++;
                 }
             }
         }
 
-        fprintf(stderr, "P2\n");
-        fprintf(stderr, "%d %d\n", m, n);
-        fprintf(stderr, "%d\n", max_iter);
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                fprintf(stderr, "%d ", true_picture[i * n + j]);
-            }
-            fprintf(stderr, "\n");
-        }
-
-        /* Compute flops */
-        double flops = 8 * m * n;
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                flops += 10 * true_picture[j * m + i];
-            }
-        }
-
+        free(gathered_picture);
+        /* Write pgm to stderr. */
+        // fprintf(stderr, "P2\n");
+        // fprintf(stderr, "%d %d\n", m, n);
+        // fprintf(stderr, "%d\n", max_iter);
+        // for (int i = 0; i < m; i++) {
+        //     for (int j = 0; j < n; j++) {
+        //         fprintf(stderr, "%d ", true_picture[i * n + j]);
+        //     }
+        //     fprintf(stderr, "\n");
+        // }
+        // printf("number of flops %lf \n", flops);
         printf("%lf\n", flops / 1e9 / duration);
-        printf("%lf duration \n", duration);
+        // printf("%lf duration \n", duration);
+        // free(true_picture);
     }
     free(picture);
     
