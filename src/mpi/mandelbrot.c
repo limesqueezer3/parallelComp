@@ -39,7 +39,7 @@ int min(int a, int b)
  * at a m x n resolution. The value of picture[i, j] is
  * the number of iterations before bailout. */
 void mandelbrot(int m, int n, double x1, double x2, double y1, double y2,
-                int max_iter, int s1, int s2, int p1, int p2, int *picture /* out */)
+                int max_iter, int s1, int s2, int p1, int p2, int *picture, int *Nthreshold, int *load /* out */)
 {
     int counter = 0;
     /* Let z = a + bi, c = d + ei */
@@ -60,11 +60,15 @@ void mandelbrot(int m, int n, double x1, double x2, double y1, double y2,
             }
 
             /* Total flops for this pixel are 14 + 7 * t. */
-            // picture[j * m + i] = t;
+            if (t == max_iter) {
+                (*Nthreshold)++;
+            }
+            *load += t;
             picture[counter] = t;
             counter++;
         }
     }
+    // printf("Nthreshold %d\n", *Nthreshold);
 }
 
 int main(int argc, char **argv)
@@ -94,6 +98,11 @@ int main(int argc, char **argv)
     double x2;
     double y1;
     double y2;
+    int NThresholdLocal = 0;
+    int *NThresholdGlobal = NULL;
+    int loadLocal = 0;
+    int *loadGlobalMax = NULL;
+    int *loadGlobalMin = NULL;
 
     //But only root process needs to read parameters
     if(my_rank == 0) {
@@ -121,12 +130,15 @@ int main(int argc, char **argv)
 
     if (my_rank == 0) {
         gathered_picture = malloc(p* max_amount * sizeof(int));
+        NThresholdGlobal = malloc(sizeof(int));
+        loadGlobalMax = malloc(sizeof(int));
+        loadGlobalMin = malloc(sizeof(int));
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
     double start = MPI_Wtime();
 
-    mandelbrot(m, n, x1, x2, y1, y2, max_iter, s1, s2, p1, p2, picture);
+    mandelbrot(m, n, x1, x2, y1, y2, max_iter, s1, s2, p1, p2, picture, &NThresholdLocal, &loadLocal);
     MPI_Barrier(MPI_COMM_WORLD);
     double stop = MPI_Wtime();
 
@@ -137,7 +149,9 @@ int main(int argc, char **argv)
         rcounts[i] = max_amount;
     }
     MPI_Gatherv(picture, max_amount, MPI_INT, gathered_picture, rcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
-    
+    MPI_Reduce(&NThresholdLocal, NThresholdGlobal, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&loadLocal, loadGlobalMax, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&loadLocal, loadGlobalMin, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD);
     double duration = stop - start;
     
     if (my_rank == 0) {
@@ -170,8 +184,12 @@ int main(int argc, char **argv)
                 }
             }
         }
-
         free(gathered_picture);
+
+        /* compute percentage at threshold*/
+        double percentage = (double) *NThresholdGlobal / (m * n) * 100;
+        // printf("%d\n", *NThresholdGlobal);
+        
         /* Write pgm to stderr. */
         // fprintf(stderr, "P2\n");
         // fprintf(stderr, "%d %d\n", m, n);
@@ -184,6 +202,12 @@ int main(int argc, char **argv)
         // }
         // printf("number of flops %lf \n", flops);
         printf("%lf\n", flops / 1e9 / duration);
+        fprintf(stderr, "%lf\n", percentage);
+
+        /* print loadbalance*/
+        // double loadbalance = (double) *loadGlobalMax / *loadGlobalMin;
+        // fprintf(stderr, "%lf\n", loadbalance);
+        
         // printf("%lf duration \n", duration);
         // free(true_picture);
     }

@@ -1,0 +1,3 @@
+[submodule "ocl-simple"]
+	path = ocl-simple
+	url = https://gitlab.science.ru.nl/parallel-computing2/ocl-simple

@@ -1,0 +1,47 @@
+\documentclass{article}
+
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+
+\pgfkeys{/pgf/number format/.cd,fixed,precision=0}
+\pgfplotstableset{col sep=comma}
+\pgfplotsset{compat=1.18}
+
+\begin{document}
+
+% Consider using loglogaxis
+\begin{figure}[ht]
+    \begin{tikzpicture}
+        \begin{semilogxaxis}[
+            xlabel=threads,
+            ylabel=Gflops/s,
+            legend pos = north west,
+            xticklabel style={/pgf/number format/fixed},
+            yticklabel style={/pgf/number format/fixed},
+            xtick = {1, 2, 4, 8, 16, 32},
+            xticklabels = {1, 2, 4, 8, 16, 32},
+        ]
+
+            \addplot+ [
+                error bars/.cd,
+                    y explicit,
+                    y dir=both,
+            ] table [
+                x=p,
+                y=mean,
+                y error plus expr=\thisrow{stddev},
+                y error minus expr=\thisrow{stddev},
+            ] {results/square_1000000.omp};
+
+            \legend{Square}
+        \end{semilogxaxis}
+    \end{tikzpicture}
+    \caption{Compute rate in Gflops/s squaring an array of $10^9$ 
+             single-precision floating point numbers for various thread counts 
+             using OpenMP.
+             Averaged over $10$ runs, with error bars ranging from $-1$ to $+1$
+             standard deviations.}
+\end{figure}
+
+\end{document}

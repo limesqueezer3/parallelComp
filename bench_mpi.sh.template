@@ -1,0 +1,22 @@
+#!/bin/sh
+
+#SBATCH --account=csmpistud
+#SBATCH --ntasks=NTASKS
+#SBATCH --nodes=NODES
+#SBATCH --ntasks-per-node=8
+#SBATCH --threads-per-core=1
+#SBATCH --partition=csmpi_short
+#SBATCH --time=00:05:00
+#SBATCH --output=OUTNAME_NTASKS.out
+
+# Compile on the machine, not the head node
+BUILD=RELEASE make mpi
+
+{
+i=1
+while [ $i -le RUNS ]
+do
+    mpiexec $@
+    i=$(( i + 1 ))
+done
+} | variance > OUTDIR/OUTNAME_NTASKS
