@@ -205,8 +205,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "%lf\n", percentage);
 
         /* print loadbalance*/
-        // double loadbalance = (double) *loadGlobalMax / *loadGlobalMin;
-        // fprintf(stderr, "loadBalance is %lf\n", loadbalance);
+        double loadbalance = (double) *loadGlobalMax / *loadGlobalMin;
+        fprintf(stderr, "loadBalance is %lf\n", loadbalance);
     }
     free(picture);
     

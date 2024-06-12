@@ -14,7 +14,7 @@ int main (int argc, char * argv[])
 {
   cl_kernel kernel;
   size_t global[2];
-  size_t local[2];
+  size_t local[1];
   /* Must be run from top directory, otherwise this path is wrong! */
   char *KernelSource = readOpenCL( "src/ocl/mandelbrot.cl");
 
@@ -36,6 +36,8 @@ int main (int argc, char * argv[])
     double y2    = atof(argv[8]);
     int count = m*n;
     int *pictureReturned = malloc(count * sizeof(int));
+    int mn_max_iter[3] = {m, n, max_iter};
+    double xy[4] = {x1, x2, y1, y2};
 
   fprintf(stderr, "work group size: %d\n", (int)local[0]);
 
@@ -43,41 +45,40 @@ int main (int argc, char * argv[])
   int correct;                       /* Number of correct results returned.  */
 
 
-  global[0] = m;
-  global[1] = n;
+  global[0] = (m + local[0] -1) / local[0] * local[0];
+  global[1] = (n + local[0] -1) / local[0] * local[0];
 
 
   CL_SAFE(initGPU());
   struct timeval tv1, tv2;
   gettimeofday(&tv1, NULL);
 
-  kernel = setupKernel( KernelSource, "mandelbrot", 1, IntArr, count, pictureReturned);
+  kernel = setupKernel( KernelSource, "mandelbrot", 3, IntArr, count, pictureReturned,
+                                                      DoubleArr, 4, xy,
+                                                      IntArr, 3, mn_max_iter);
 
-  runKernel( kernel, 1, global, local);
+  runKernel( kernel, 2, global, local);
 
   gettimeofday(&tv2, NULL);
 
   double duration = (double) (tv2.tv_usec - tv1.tv_usec) / 1e6 +
                     (double) (tv2.tv_sec - tv1.tv_sec) / 1e9;
 
-  double flops = (double)DATA_SIZE;
+  /* Compute flops */
+    double flops = 8 * m * n;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            flops += 10 * pictureReturned[j * m + i];
+        }
+    }
   printf("%lf\n", flops / duration / 1e9);
 
-  /* Validate our results.  */
-  correct = 0;
-  for (int i = 0; i < count; i++)
-    if (results[i] == data[i] * data[i])
-      correct++;
 
-  /* Print a brief summary detailing the results.  */
-  fprintf (stderr, "Computed %d/%d %2.0f%% correct values\n", correct, count,
-                   (float)correct/count*100.f);
+
 
   CL_SAFE(clReleaseKernel (kernel));
   CL_SAFE(freeDevice());
-
-  free(data);
-  free(results);
+  free(pictureReturned);
 
   return 0;
 }

@@ -201,6 +201,7 @@ int main(int argc, char **argv)
         free(gathered_picture);
         /* compute percentage of pixels at threshold*/
         double percentage = (double) *NThresholdGlobal / (m * n);
+        printf("%lf\n", flops);
         printf("%lf\n", flops / 1e9 / duration);
         fprintf(stderr, "%lf\n", percentage);
 
