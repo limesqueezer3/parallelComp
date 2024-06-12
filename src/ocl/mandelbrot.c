@@ -71,6 +71,18 @@ int main (int argc, char * argv[])
             flops += 10 * pictureReturned[j * m + i];
         }
     }
+
+      /* Write pgm to stderr. */
+    fprintf(stderr, "P2\n");
+    fprintf(stderr, "%d %d\n", m, n);
+    fprintf(stderr, "%d\n", max_iter);
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            fprintf(stderr, "%d ", picture[i * n + j]);
+        }
+        fprintf(stderr, "\n");
+    }
+    
   printf("%lf\n", flops / duration / 1e9);
 
 

@@ -18,13 +18,20 @@ __kernel void mandelbrot(
    if (i < m && j < n) {
     double cComplex = y1 + (y2 - y1) * j / n;
     double cReal = x1 + (x2 - x1) * i / m;
-    double z = 0;
-    \\ implement further
-
+    double zComplex = 0;
+    double zReal = 0;
+    double zSquaredComplex, zSquaredReal;
     
-    pictureReturned[j * m + i] = ;
+    while ((sqrt((zComplex * zComplex + zReal * zReal)) < 2)
+            && iter < max_iter) {
+               zSquaredReal = zReal * zReal - zComplex * zComplex;
+               zSquaredComplex = zReal * zComplex + zReal * zComplex;
+               zComplex = zSquaredComplex + cComplex;
+               zReal = zSquaredReal + cReal; 
+               iter++;
+            } 
+    pictureReturned[j * m + i] = iter;
    } else {
     pictureReturned[j * m + i] = 0;
    }
-   
 }
